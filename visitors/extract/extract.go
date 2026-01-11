@@ -1,31 +1,30 @@
 package extract
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/t14raptor/go-fast/ast"
 )
 
-type Extract struct {
+type Ctx struct {
 	ast.NoopVisitor
+	Ve       string
 	Path     string
-	Endpoint string
 	Alphabet string
 }
 
-func (v *Extract) VisitStringLiteral(n *ast.StringLiteral) {
+func (v *Ctx) VisitStringLiteral(n *ast.StringLiteral) {
 	n.VisitChildrenWith(v)
 	val := n.Value
 
 	if strings.HasPrefix(val, "/jsd/oneshot/") {
-		v.Endpoint = val
+		v.Path = val
 	} else if IsExactAlphabetPermutation(val) {
 		v.Alphabet = val
 	}
 }
 
-func (v *Extract) VisitObjectLiteral(n *ast.ObjectLiteral) {
+func (v *Ctx) VisitObjectLiteral(n *ast.ObjectLiteral) {
 	n.VisitChildrenWith(v)
 
 	if len(n.Value) != 1 {
@@ -43,18 +42,18 @@ func (v *Extract) VisitObjectLiteral(n *ast.ObjectLiteral) {
 	}
 
 	if strLit.Value == "b" {
-		v.Path = "b"
+		v.Ve = "b"
 	} else if strLit.Value == "g" {
-		v.Path = "g"
+		v.Ve = "g"
 	}
 }
 
-func ParseScript(p *ast.Program) {
-	f := &Extract{}
+func ParseScript(p *ast.Program) *Ctx {
+	f := &Ctx{}
 	f.V = f
 	p.VisitWith(f)
 
-	fmt.Println(f)
+	return f
 }
 
 const LZStringURISafeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$"
