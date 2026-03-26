@@ -19,20 +19,24 @@ import (
 )
 
 var (
-	flagURL  = flag.String("url", "", "Target URL with Cloudflare challenge (required)")
-	flagHost = flag.String("host", "", "Host header (auto-extracted from URL if empty)")
+	flagURL    = flag.String("url", "", "Target URL with Cloudflare challenge")
+	flagFile   = flag.String("file", "", "Local JS file to process (offline mode)")
+	flagOutput = flag.String("output", "out.js", "Output file for offline mode")
+	flagHost   = flag.String("host", "", "Host header (auto-extracted from URL if empty)")
 )
 
-func main2() {
-	file, err := os.ReadFile("in.js")
+func processLocalFile(inputPath, outputPath string) {
+	file, err := os.ReadFile(inputPath)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
+		os.Exit(1)
 	}
 	src := string(file)
 
 	ast, err := parser.ParseFile(src)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Error parsing file: %v\n", err)
+		os.Exit(1)
 	}
 
 	deobf.UnrollMaps(ast)
@@ -42,9 +46,15 @@ func main2() {
 	deobf.ConcatStrings(ast)
 	simplifier.Simplify(ast, false)
 
-	os.WriteFile("out.js", []byte(generator.Generate(ast)), 0644)
+	err = os.WriteFile(outputPath, []byte(generator.Generate(ast)), 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
+		os.Exit(1)
+	}
 
-	extract.ParseScript(ast)
+	fmt.Printf("Deobfuscated: %s -> %s\n", inputPath, outputPath)
+	ctx := extract.ParseScript(ast)
+	fmt.Printf("Extracted: Ve=%s Path=%s Alphabet(len=%d)\n", ctx.Ve, ctx.Path, len(ctx.Alphabet))
 }
 
 func fetchExt(targetURL string) (*jsd.Extracted, error) {
@@ -98,13 +108,26 @@ func fetchExt(targetURL string) (*jsd.Extracted, error) {
 func main() {
 	flag.Parse()
 
-	if *flagURL == "" {
-		fmt.Fprintln(os.Stderr, "Error: -url flag is required")
-		fmt.Fprintln(os.Stderr, "Usage: cloudflare-jsd -url <target-url> [-host <host>]")
+	// Validate: need either -url or -file, but not both
+	if *flagURL == "" && *flagFile == "" {
+		fmt.Fprintln(os.Stderr, "Error: either -url or -file flag is required")
+		fmt.Fprintln(os.Stderr, "Usage:")
+		fmt.Fprintln(os.Stderr, "  cloudflare-jsd -url <target-url> [-host <host>]")
+		fmt.Fprintln(os.Stderr, "  cloudflare-jsd -file <input.js> [-output <output.js>]")
+		os.Exit(1)
+	}
+	if *flagURL != "" && *flagFile != "" {
+		fmt.Fprintln(os.Stderr, "Error: cannot use both -url and -file flags")
 		os.Exit(1)
 	}
 
-	// Parse URL and extract host if not provided
+	// Offline mode: process local file
+	if *flagFile != "" {
+		processLocalFile(*flagFile, *flagOutput)
+		return
+	}
+
+	// Online mode: fetch from URL
 	parsedURL, err := url.Parse(*flagURL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing URL: %v\n", err)
