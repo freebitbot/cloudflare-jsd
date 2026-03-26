@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "golang": {
+      "source": "saisudhir14/golang-agent-skill",
+      "sourceType": "github",
+      "computedHash": "59e37026b5e6ff96cbca79822135a55c6fac9d5028a4033ce4cc152551d37bae"
+    },
+    "golang-modernize": {
+      "source": "samber/cc-skills-golang",
+      "sourceType": "github",
+      "computedHash": "cd91043fd9682bdd1a0f87971efe189e1432e23a7a8a4aa49c90841397c16fc1"
+    },
+    "golang-troubleshooting": {
+      "source": "samber/cc-skills-golang",
+      "sourceType": "github",
+      "computedHash": "eb8834c59da219410cde3ef3b91d1cd0b118d633af3ae494126a5d18aa1e8cea"
+    }
+  }
+}
