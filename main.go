@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 
 	http "github.com/bogdanfinn/fhttp"
@@ -14,6 +16,11 @@ import (
 	"github.com/xkiian/cloudflare-jsd/jsd"
 	"github.com/xkiian/cloudflare-jsd/visitors/deobf"
 	"github.com/xkiian/cloudflare-jsd/visitors/extract"
+)
+
+var (
+	flagURL  = flag.String("url", "", "Target URL with Cloudflare challenge (required)")
+	flagHost = flag.String("host", "", "Host header (auto-extracted from URL if empty)")
 )
 
 func main2() {
@@ -40,8 +47,8 @@ func main2() {
 	extract.ParseScript(ast)
 }
 
-func fetchExt() (*jsd.Extracted, error) {
-	req, err := http.NewRequest(http.MethodGet, "https://www.bstn.com/eu_de", nil)
+func fetchExt(targetURL string) (*jsd.Extracted, error) {
+	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -89,14 +96,32 @@ func fetchExt() (*jsd.Extracted, error) {
 }
 
 func main() {
+	flag.Parse()
 
-	ext, err := fetchExt()
+	if *flagURL == "" {
+		fmt.Fprintln(os.Stderr, "Error: -url flag is required")
+		fmt.Fprintln(os.Stderr, "Usage: cloudflare-jsd -url <target-url> [-host <host>]")
+		os.Exit(1)
+	}
 
-	solver, err := jsd.NewSolver(
-		"www.bstn.com",
-		"https://www.bstn.com/eu_de",
-		ext,
-	)
+	// Parse URL and extract host if not provided
+	parsedURL, err := url.Parse(*flagURL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing URL: %v\n", err)
+		os.Exit(1)
+	}
+
+	targetHost := *flagHost
+	if targetHost == "" {
+		targetHost = parsedURL.Host
+	}
+
+	ext, err := fetchExt(*flagURL)
+	if err != nil {
+		panic(err)
+	}
+
+	solver, err := jsd.NewSolver(targetHost, *flagURL, ext)
 	if err != nil {
 		panic(err)
 	}
