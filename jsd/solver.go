@@ -26,12 +26,12 @@ type JsdSolver struct {
 	ext    *Extracted
 }
 
-func NewSolver(targetURL, uri string, ext *Extracted) (*JsdSolver, error) {
+func NewSolver(targetURL, uri string, ext *Extracted, profile profiles.ClientProfile) (*JsdSolver, error) {
 	jar := tlsclient.NewCookieJar()
 
 	options := []tlsclient.HttpClientOption{
 		tlsclient.WithTimeoutSeconds(30),
-		tlsclient.WithClientProfile(profiles.Chrome_133),
+		tlsclient.WithClientProfile(profile),
 		tlsclient.WithCookieJar(jar),
 		tlsclient.WithRandomTLSExtensionOrder(),
 		tlsclient.WithDisableHttp3(),
@@ -58,15 +58,15 @@ func (s *JsdSolver) FetchScript() (*string, error) {
 
 	req.Header = http.Header{
 		"sec-ch-ua-platform": {"\"Windows\""},
-		"user-agent":         {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"},
-		"sec-ch-ua":          {"\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\""},
+		"user-agent":         {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"},
+		"sec-ch-ua":          {"\"Chromium\";v=\"146\", \"Google Chrome\";v=\"146\", \"Not;A=Brand\";v=\"99\""},
 		"sec-ch-ua-mobile":   {"?0"},
 		"accept":             {"*/*"},
 		"sec-fetch-site":     {"same-origin"},
 		"sec-fetch-mode":     {"no-cors"},
 		"sec-fetch-dest":     {"script"},
 		"accept-encoding":    {"gzip, deflate, br, zstd"},
-		"accept-language":    {"de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"},
+		"accept-language":    {"en-US,en;q=0.9"},
 		http.HeaderOrderKey:  {"sec-ch-ua-platform", "user-agent", "sec-ch-ua", "sec-ch-ua-mobile", "accept", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest", "accept-encoding", "accept-language", "cookie"},
 	}
 
@@ -121,8 +121,8 @@ func (s *JsdSolver) Submit() (string, error) {
 
 	req.Header = http.Header{
 		"sec-ch-ua-platform": {"\"Windows\""},
-		"user-agent":         {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"},
-		"sec-ch-ua":          {"\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\""},
+		"user-agent":         {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"},
+		"sec-ch-ua":          {"\"Chromium\";v=\"146\", \"Google Chrome\";v=\"146\", \"Not;A=Brand\";v=\"99\""},
 		"content-type":       {"text/plain;charset=UTF-8"},
 		"sec-ch-ua-mobile":   {"?0"},
 		"accept":             {"*/*"},
@@ -131,7 +131,7 @@ func (s *JsdSolver) Submit() (string, error) {
 		"sec-fetch-mode":     {"cors"},
 		"sec-fetch-dest":     {"empty"},
 		"accept-encoding":    {"gzip, deflate, br, zstd"},
-		"accept-language":    {"de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"},
+		"accept-language":    {"en-US,en;q=0.9"},
 		"priority":           {"u=1, i"},
 		http.HeaderOrderKey:  {"content-length", "sec-ch-ua-platform", "user-agent", "sec-ch-ua", "content-type", "sec-ch-ua-mobile", "accept", "origin", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest", "accept-encoding", "accept-language", "cookie", "priority"},
 	}

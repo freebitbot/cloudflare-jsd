@@ -19,12 +19,21 @@ import (
 )
 
 var (
-	flagURL    = flag.String("url", "", "Target URL with Cloudflare challenge")
-	flagFile   = flag.String("file", "", "Local JS file to process (offline mode)")
-	flagOutput = flag.String("output", "out.js", "Output file for offline mode")
-	flagHost   = flag.String("host", "", "Host header (auto-extracted from URL if empty)")
+	flagURL     = flag.String("url", "", "Target URL with Cloudflare challenge")
+	flagFile    = flag.String("file", "", "Local JS file to process (offline mode)")
+	flagOutput  = flag.String("output", "out.js", "Output file for offline mode")
+	flagHost    = flag.String("host", "", "Host header (auto-extracted from URL if empty)")
 	flagDownload = flag.String("download", "", "Download challenge script to file (requires -url)")
+	flagProfile = flag.String("profile", "chrome_146", "Browser TLS profile (chrome_146, chrome_146_psk, firefox_148, safari_ios_18_0, etc.)")
 )
+
+func getProfile(name string) profiles.ClientProfile {
+	if p, ok := profiles.MappedTLSClients[name]; ok {
+		return p
+	}
+	fmt.Fprintf(os.Stderr, "Warning: unknown profile '%s', using chrome_146\n", name)
+	return profiles.MappedTLSClients["chrome_146"]
+}
 
 func processLocalFile(inputPath, outputPath string) {
 	file, err := os.ReadFile(inputPath)
@@ -71,7 +80,7 @@ func downloadScript(targetURL, outputPath string) {
 		os.Exit(1)
 	}
 
-	solver, err := jsd.NewSolver(parsedURL.Host, targetURL, ext)
+	solver, err := jsd.NewSolver(parsedURL.Host, targetURL, ext, getProfile(*flagProfile))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating solver: %v\n", err)
 		os.Exit(1)
@@ -99,24 +108,24 @@ func fetchExt(targetURL string) (*jsd.Extracted, error) {
 	}
 	req.Header = http.Header{
 		"upgrade-insecure-requests": {"1"},
-		"user-agent":                {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"},
+		"user-agent":                {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"},
 		"accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
 		"sec-fetch-site":            {"none"},
 		"sec-fetch-mode":            {"navigate"},
 		"sec-fetch-user":            {"?1"},
 		"sec-fetch-dest":            {"document"},
-		"sec-ch-ua":                 {"\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\""},
+		"sec-ch-ua":                 {"\"Chromium\";v=\"146\", \"Google Chrome\";v=\"146\", \"Not;A=Brand\";v=\"99\""},
 		"sec-ch-ua-mobile":          {"?0"},
 		"sec-ch-ua-platform":        {"\"Windows\""},
 		"accept-encoding":           {"gzip, deflate, br, zstd"},
-		"accept-language":           {"de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7"},
+		"accept-language":           {"en-US,en;q=0.9"},
 		"priority":                  {"u=0, i"},
 		http.HeaderOrderKey:         {"upgrade-insecure-requests", "user-agent", "accept", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-user", "sec-fetch-dest", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "accept-encoding", "accept-language", "cookie", "priority"},
 	}
 
 	options := []tlsclient.HttpClientOption{
 		tlsclient.WithTimeoutSeconds(30),
-		tlsclient.WithClientProfile(profiles.Chrome_133),
+		tlsclient.WithClientProfile(getProfile(*flagProfile)),
 		tlsclient.WithRandomTLSExtensionOrder(),
 		tlsclient.WithDisableHttp3(),
 	}
@@ -190,7 +199,7 @@ func main() {
 		panic(err)
 	}
 
-	solver, err := jsd.NewSolver(targetHost, *flagURL, ext)
+	solver, err := jsd.NewSolver(targetHost, *flagURL, ext, getProfile(*flagProfile))
 	if err != nil {
 		panic(err)
 	}

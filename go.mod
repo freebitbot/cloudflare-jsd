@@ -3,8 +3,8 @@ module github.com/xkiian/cloudflare-jsd
 go 1.25.1
 
 require (
-	github.com/bogdanfinn/fhttp v0.6.6
-	github.com/bogdanfinn/tls-client v1.13.1
+	github.com/bogdanfinn/fhttp v0.6.8
+	github.com/bogdanfinn/tls-client v1.14.0
 	github.com/iancoleman/orderedmap v0.3.0
 	github.com/t14raptor/go-fast v0.0.4
 )
@@ -13,8 +13,9 @@ require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/bdandy/go-errors v1.2.2 // indirect
 	github.com/bdandy/go-socks4 v1.2.3 // indirect
-	github.com/bogdanfinn/quic-go-utls v1.0.7-utls // indirect
+	github.com/bogdanfinn/quic-go-utls v1.0.9-utls // indirect
 	github.com/bogdanfinn/utls v1.7.7-barnius // indirect
+	github.com/bogdanfinn/websocket v1.5.5-barnius // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/nukilabs/ftoa v1.0.0 // indirect
 	github.com/nukilabs/unicodeid v0.1.0 // indirect
