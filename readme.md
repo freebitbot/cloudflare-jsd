@@ -39,6 +39,20 @@ go build -o cloudflare-jsd .
 ./cloudflare-jsd -file challenge.js -output deobfuscated.js
 ```
 
+### Custom Browser Fingerprint
+
+By default, the solver uses a built-in fingerprint with Windows/Chrome values. For better stealth, you can capture a real browser fingerprint:
+
+```bash
+# 1. Open target site in your browser (Chrome DevTools → Console)
+# 2. Paste and run content of get_fingerprint.js
+# 3. Copy JSON output to fingerprint.json
+# 4. Use with solver
+./cloudflare-jsd -url https://target-site.com -fingerprint fingerprint.json
+```
+
+This allows you to use real browser fingerprints from any device/browser combination (Mac, Linux, mobile, etc.).
+
 ## CLI Flags
 
 | Flag | Default | Description |
@@ -48,6 +62,8 @@ go build -o cloudflare-jsd .
 | `-output` | `out.js` | Output file for offline mode |
 | `-host` | auto | Host header (auto-extracted from URL) |
 | `-download` | - | Download challenge script to file |
+| `-fingerprint` | - | Path to fingerprint JSON file (optional) |
+| `-profile` | `chrome_146` | Browser TLS profile |
 
 ## How It Works
 

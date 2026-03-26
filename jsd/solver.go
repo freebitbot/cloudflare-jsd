@@ -19,14 +19,15 @@ type Extracted struct {
 	t string
 }
 type JsdSolver struct {
-	client tlsclient.HttpClient
-	host   string
-	uri    string
-	ctx    *extract.Ctx
-	ext    *Extracted
+	client      tlsclient.HttpClient
+	host        string
+	uri         string
+	ctx         *extract.Ctx
+	ext         *Extracted
+	fingerprint *orderedmap.OrderedMap
 }
 
-func NewSolver(targetURL, uri string, ext *Extracted, profile profiles.ClientProfile) (*JsdSolver, error) {
+func NewSolver(targetURL, uri string, ext *Extracted, profile profiles.ClientProfile, fingerprint *orderedmap.OrderedMap) (*JsdSolver, error) {
 	jar := tlsclient.NewCookieJar()
 
 	options := []tlsclient.HttpClientOption{
@@ -43,10 +44,11 @@ func NewSolver(targetURL, uri string, ext *Extracted, profile profiles.ClientPro
 	}
 
 	return &JsdSolver{
-		client: client,
-		host:   strings.TrimSuffix(targetURL, "/"),
-		uri:    uri,
-		ext:    ext,
+		client:      client,
+		host:        strings.TrimSuffix(targetURL, "/"),
+		uri:         uri,
+		ext:         ext,
+		fingerprint: fingerprint,
 	}, nil
 }
 
@@ -98,7 +100,7 @@ func (s *JsdSolver) Submit() (string, error) {
 	payload.Set("t", decodeTimestamp(s.ext.t))
 	payload.Set("lhr", "about:blank")
 	payload.Set("api", false)
-	payload.Set("payload", generateFingerprint(s.host, s.uri))
+	payload.Set("payload", s.fingerprint)
 
 	jsonB, err := payload.MarshalJSON()
 	if err != nil {

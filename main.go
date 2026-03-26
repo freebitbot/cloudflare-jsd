@@ -19,12 +19,13 @@ import (
 )
 
 var (
-	flagURL     = flag.String("url", "", "Target URL with Cloudflare challenge")
-	flagFile    = flag.String("file", "", "Local JS file to process (offline mode)")
-	flagOutput  = flag.String("output", "out.js", "Output file for offline mode")
-	flagHost    = flag.String("host", "", "Host header (auto-extracted from URL if empty)")
-	flagDownload = flag.String("download", "", "Download challenge script to file (requires -url)")
-	flagProfile = flag.String("profile", "chrome_146", "Browser TLS profile (chrome_146, chrome_146_psk, firefox_148, safari_ios_18_0, etc.)")
+	flagURL         = flag.String("url", "", "Target URL with Cloudflare challenge")
+	flagFile        = flag.String("file", "", "Local JS file to process (offline mode)")
+	flagOutput      = flag.String("output", "out.js", "Output file for offline mode")
+	flagHost        = flag.String("host", "", "Host header (auto-extracted from URL if empty)")
+	flagDownload    = flag.String("download", "", "Download challenge script to file (requires -url)")
+	flagProfile     = flag.String("profile", "chrome_146", "Browser TLS profile (chrome_146, chrome_146_psk, firefox_148, safari_ios_18_0, etc.)")
+	flagFingerprint = flag.String("fingerprint", "", "Path to fingerprint JSON file (optional, uses built-in if empty)")
 )
 
 func getProfile(name string) profiles.ClientProfile {
@@ -80,7 +81,14 @@ func downloadScript(targetURL, outputPath string) {
 		os.Exit(1)
 	}
 
-	solver, err := jsd.NewSolver(parsedURL.Host, targetURL, ext, getProfile(*flagProfile))
+	// Load or generate fingerprint
+	fp, err := jsd.GenerateFingerprint(parsedURL.Host, targetURL, *flagFingerprint)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading fingerprint: %v\n", err)
+		os.Exit(1)
+	}
+
+	solver, err := jsd.NewSolver(parsedURL.Host, targetURL, ext, getProfile(*flagProfile), fp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating solver: %v\n", err)
 		os.Exit(1)
@@ -199,7 +207,14 @@ func main() {
 		panic(err)
 	}
 
-	solver, err := jsd.NewSolver(targetHost, *flagURL, ext, getProfile(*flagProfile))
+	// Load or generate fingerprint
+	fp, err := jsd.GenerateFingerprint(targetHost, *flagURL, *flagFingerprint)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading fingerprint: %v\n", err)
+		os.Exit(1)
+	}
+
+	solver, err := jsd.NewSolver(targetHost, *flagURL, ext, getProfile(*flagProfile), fp)
 	if err != nil {
 		panic(err)
 	}

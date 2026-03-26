@@ -1,13 +1,79 @@
 package jsd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/iancoleman/orderedmap"
 )
 
-func generateFingerprint(host, uri string) *orderedmap.OrderedMap {
+// FingerprintData represents the structure of fingerprint.json
+type FingerprintData map[string][]string
+
+// LoadFingerprintFromFile loads fingerprint from JSON file
+func LoadFingerprintFromFile(path string) (FingerprintData, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read fingerprint file: %w", err)
+	}
+
+	var fp FingerprintData
+	if err := json.Unmarshal(data, &fp); err != nil {
+		return nil, fmt.Errorf("failed to parse fingerprint JSON: %w", err)
+	}
+
+	return fp, nil
+}
+
+// GenerateFingerprint creates fingerprint map from file or defaults
+func GenerateFingerprint(host, uri, fingerprintPath string) (*orderedmap.OrderedMap, error) {
+	if fingerprintPath != "" {
+		// Load from file
+		fp, err := LoadFingerprintFromFile(fingerprintPath)
+		if err != nil {
+			return nil, err
+		}
+
+		o := orderedmap.New()
+		now := time.Now()
+		lastModified := now.Format("01/02/2006 15:04:05")
+
+		for key, values := range fp {
+			// Replace timestamp placeholder
+			if key == "%timestamp%" {
+				key = lastModified
+			}
+
+			// Replace dynamic values in array
+			newValues := make([]string, len(values))
+			for i, v := range values {
+				switch v {
+				case "origin":
+					newValues[i] = fmt.Sprintf("https://%s", host)
+				case "d.domain":
+					// Keep as-is, the key is the domain value
+					newValues[i] = v
+				case "d.referrer", "d.baseURI":
+					// Keep as-is, the key is the URI value
+					newValues[i] = v
+				default:
+					newValues[i] = v
+				}
+			}
+
+			o.Set(key, newValues)
+		}
+
+		return o, nil
+	}
+
+	// Use built-in hardcoded fingerprint
+	return generateDefaultFingerprint(host, uri), nil
+}
+
+func generateDefaultFingerprint(host, uri string) *orderedmap.OrderedMap {
 	now := time.Now()
 	lastModified := now.Format("01/02/2006 15:04:05")
 
