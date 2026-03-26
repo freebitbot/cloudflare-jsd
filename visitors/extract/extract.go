@@ -18,7 +18,7 @@ func (v *Ctx) VisitStringLiteral(n *ast.StringLiteral) {
 	val := n.Value
 
 	if strings.HasPrefix(val, "/jsd/oneshot/") {
-		v.Path = val
+		v.Path = strings.TrimPrefix(val, "/jsd/oneshot")
 	} else if IsExactAlphabetPermutation(val) {
 		v.Alphabet = val
 	}
