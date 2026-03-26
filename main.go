@@ -23,6 +23,7 @@ var (
 	flagFile   = flag.String("file", "", "Local JS file to process (offline mode)")
 	flagOutput = flag.String("output", "out.js", "Output file for offline mode")
 	flagHost   = flag.String("host", "", "Host header (auto-extracted from URL if empty)")
+	flagDownload = flag.String("download", "", "Download challenge script to file (requires -url)")
 )
 
 func processLocalFile(inputPath, outputPath string) {
@@ -55,6 +56,40 @@ func processLocalFile(inputPath, outputPath string) {
 	fmt.Printf("Deobfuscated: %s -> %s\n", inputPath, outputPath)
 	ctx := extract.ParseScript(ast)
 	fmt.Printf("Extracted: Ve=%s Path=%s Alphabet(len=%d)\n", ctx.Ve, ctx.Path, len(ctx.Alphabet))
+}
+
+func downloadScript(targetURL, outputPath string) {
+	parsedURL, err := url.Parse(targetURL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing URL: %v\n", err)
+		os.Exit(1)
+	}
+
+	ext, err := fetchExt(targetURL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error fetching page: %v\n", err)
+		os.Exit(1)
+	}
+
+	solver, err := jsd.NewSolver(parsedURL.Host, targetURL, ext)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating solver: %v\n", err)
+		os.Exit(1)
+	}
+
+	script, err := solver.FetchScript()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error fetching script: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = os.WriteFile(outputPath, []byte(*script), 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Downloaded: https://%s/cdn-cgi/challenge-platform/scripts/jsd/main.js -> %s\n", parsedURL.Host, outputPath)
 }
 
 func fetchExt(targetURL string) (*jsd.Extracted, error) {
@@ -108,11 +143,22 @@ func fetchExt(targetURL string) (*jsd.Extracted, error) {
 func main() {
 	flag.Parse()
 
+	// Download mode: requires -url and -download
+	if *flagDownload != "" {
+		if *flagURL == "" {
+			fmt.Fprintln(os.Stderr, "Error: -download requires -url flag")
+			os.Exit(1)
+		}
+		downloadScript(*flagURL, *flagDownload)
+		return
+	}
+
 	// Validate: need either -url or -file, but not both
 	if *flagURL == "" && *flagFile == "" {
 		fmt.Fprintln(os.Stderr, "Error: either -url or -file flag is required")
 		fmt.Fprintln(os.Stderr, "Usage:")
 		fmt.Fprintln(os.Stderr, "  cloudflare-jsd -url <target-url> [-host <host>]")
+		fmt.Fprintln(os.Stderr, "  cloudflare-jsd -url <target-url> -download <output.js>")
 		fmt.Fprintln(os.Stderr, "  cloudflare-jsd -file <input.js> [-output <output.js>]")
 		os.Exit(1)
 	}

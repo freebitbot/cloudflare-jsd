@@ -1,47 +1,125 @@
+# Cloudflare JSD Solver
 
+Go-based solver for Cloudflare's JavaScript Deobfuscation (JSD) challenge.
 
-# THIS REPOSITORY IS CURRENTLY BEING UPDATED TO GOLANG
+> ⚠️ **Note**: This is NOT a Cloudflare Turnstile solver. It's a completely different challenge.
 
+## Installation
 
-# Cloudflare jsd
+```bash
+go build -o cloudflare-jsd .
+```
 
-I fully reverse engineered the ` Cloudflare jsd` [challenge](./reverse/script.js).
+## Usage
 
-# ⭐️ star the repo
+### Online Mode (solve challenge from URL)
 
-please star the repo to show support❤️
-i might publish cf turnstile👀
+```bash
+# Basic usage - fetch and solve
+./cloudflare-jsd -url https://target-site.com
 
+# With custom host header
+./cloudflare-jsd -url https://target-site.com -host custom.host.com
+```
 
-## Fingerprint
+### Download Challenge Script
 
-Obtaining a fingerprint is pretty easy.
+```bash
+# Download the obfuscated main.js for analysis
+./cloudflare-jsd -url https://target-site.com -download challenge.js
 
-1. Go to the target Website
-2. Copy the code from [get_fingerprint.js](get_fingerprint.js) and paste it into the console (F12 -> Console)
-3. Copy the output and paste it into `fingerprint.json`
+# Then process it offline
+./cloudflare-jsd -file challenge.js -output deobfuscated.js
+```
 
-The script automatically gets the fingerprint and replaces the timestamp with %timestamp% for your convenience
+### Offline Mode (process local file)
 
+```bash
+# Deobfuscate a previously downloaded script
+./cloudflare-jsd -file challenge.js -output deobfuscated.js
+```
 
-## License
+## CLI Flags
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-url` | - | Target URL with Cloudflare challenge |
+| `-file` | - | Local JS file to process (offline mode) |
+| `-output` | `out.js` | Output file for offline mode |
+| `-host` | auto | Host header (auto-extracted from URL) |
+| `-download` | - | Download challenge script to file |
 
-## Note
+## How It Works
 
-This is **NOT** a cloudflare turnstile solver. It's a completetly different challenge. Please stop making Issues about it.
+```
+1. Fetch target URL → extract r/t params from HTML
+2. Fetch /cdn-cgi/challenge-platform/scripts/jsd/main.js
+3. Deobfuscate the script (see pipeline below)
+4. Extract Ve, Path, Alphabet from deobfuscated AST
+5. Generate browser fingerprint
+6. Compress with LZ-String and submit to Cloudflare
+```
 
-## Star History
+## Deobfuscation Pipeline
 
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=xKiian/cloudflare-jsd&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=xKiian/cloudflare-jsd&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=xKiian/cloudflare-jsd&type=Date" />
- </picture>
+| Pass | Description |
+|------|-------------|
+| `UnrollMaps` | Inline object literal property lookups |
+| `SequenceUnroller` | Convert sequence expressions to statements |
+| `ReplaceReassignments` | Inline proxy variable reassignments |
+| `ReplaceStrings` | Replace string function calls with literals |
+| `ConcatStrings` | Concatenate adjacent string literals |
+| `Simplify` | Final cleanup pass |
+
+## Project Structure
+
+```
+├── main.go                 # CLI entry point
+├── jsd/
+│   ├── solver.go           # JsdSolver: fetch, deobfuscate, submit
+│   ├── fp.go               # Browser fingerprint generation
+│   ├── lz.go               # LZ-String compression
+│   └── utils.go            # Extract r/t params from HTML
+├── visitors/deobf/         # AST deobfuscation passes
+│   ├── deobf.go            # Pipeline orchestration
+│   ├── maps.go             # UnrollMaps
+│   ├── sequence_unrolling.go
+│   ├── concat_strings.go
+│   ├── replace_strings.go
+│   ├── replace_reassignments.go
+│   └── proxy_functions.go
+└── visitors/extract/       # Parameter extraction
+    └── extract.go          # Parse Ve, Path, Alphabet from AST
+```
+
+## Dependencies
+
+- [go-fast](https://github.com/t14raptor/go-fast) - JavaScript parser with AST visitor
+- [tls-client](https://github.com/bogdanfinn/tls-client) - TLS fingerprint simulation
+- [orderedmap](https://github.com/iancoleman/orderedmap) - Ordered JSON serialization
+
+## Development
+
+```bash
+# Run
+go run main.go -url https://example.com
+
+# Build
+go build -o cloudflare-jsd .
+
+# Format
+go fmt ./...
+
+# Tidy
+go mod tidy
+```
 
 ---
 
 ## Disclaimer
 
 This package is unofficial and not affiliated with Cloudflare. Use it responsibly and in accordance with Cloudflare's terms of service.
+
+## License
+
+MIT
