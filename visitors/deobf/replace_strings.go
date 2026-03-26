@@ -34,7 +34,15 @@ func (v *stringReplacerGather) VisitCallExpression(n *ast.CallExpression) {
 		return
 	}
 
-	v.stringArray = strings.Split(obj.Value, ",")
+	// Cloudflare changed delimiter from "," to "?" at some point
+	// Try both and use the one that produces more elements
+	commaSplit := strings.Split(obj.Value, ",")
+	questionSplit := strings.Split(obj.Value, "?")
+	if len(questionSplit) > len(commaSplit) {
+		v.stringArray = questionSplit
+	} else {
+		v.stringArray = commaSplit
+	}
 }
 
 func (v *stringReplacerGather) VisitFunctionDeclaration(n *ast.FunctionDeclaration) {
